@@ -25,8 +25,8 @@ if (Platform.OS === 'android') {
 interface Props {
   data: CardData[];
   renderCard: (item: CardData) => JSX.Element;
-  onSwipeLeft: () => void;
-  onSwipeRight: () => void;
+  onSwipeLeft?: (item: CardData) => void;
+  onSwipeRight?: (item: CardData) => void;
   renderNoMoreCards: () => React.ReactNode;
 }
 export default function Deck({
