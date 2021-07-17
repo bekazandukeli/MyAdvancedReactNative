@@ -1,29 +1,40 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   PanResponder,
   Animated,
-  StyleProp,
   ViewStyle,
   Dimensions,
   RegisteredStyle,
+  StyleSheet,
+  Platform,
+  UIManager,
+  LayoutAnimation,
 } from 'react-native';
 import { CardData } from '../App';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
 
+if (Platform.OS === 'android') {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
+
 interface Props {
   data: CardData[];
   renderCard: (item: CardData) => JSX.Element;
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
+  renderNoMoreCards: () => React.ReactNode;
 }
 export default function Deck({
   renderCard,
   data,
   onSwipeLeft = () => null,
   onSwipeRight = () => null,
+  renderNoMoreCards = () => React,
 }: Props) {
   const position = useRef(new Animated.ValueXY()).current;
   const [itemIndex, setItemIndex] = useState(0);
@@ -59,6 +70,7 @@ export default function Deck({
     const item = data[itemIndex];
     direction === 'right' ? onSwipeRight(item) : onSwipeLeft(item);
     position.setValue({ x: 0, y: 0 });
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
     setItemIndex((prev) => prev + 1);
   }
 
@@ -83,21 +95,47 @@ export default function Deck({
   }
 
   function renderCards() {
-    return data.map((item, index) => {
-      if (index === itemIndex) {
+    if (itemIndex >= data.length) {
+      return renderNoMoreCards();
+    }
+
+    return data
+      .map((item, index) => {
+        if (index < itemIndex) return null;
+
+        if (index === itemIndex) {
+          return (
+            <Animated.View
+              style={[getCardStyle(), styles.card]}
+              key={item.id}
+              {...panResponder.panHandlers}
+            >
+              {renderCard(item)}
+            </Animated.View>
+          );
+        }
         return (
           <Animated.View
-            style={[getCardStyle()]}
             key={item.id}
-            {...panResponder.panHandlers}
+            style={[styles.card, { top: 10 * (index - itemIndex) }]}
           >
             {renderCard(item)}
           </Animated.View>
         );
-      }
-      return renderCard(item);
-    });
+      })
+      .reverse();
   }
+
+  useEffect(() => {
+    setItemIndex(0);
+  }, [data]);
 
   return <View>{renderCards()}</View>;
 }
+
+const styles = StyleSheet.create({
+  card: {
+    position: 'absolute',
+    width: '100%',
+  },
+});
